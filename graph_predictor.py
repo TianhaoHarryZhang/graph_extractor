@@ -35,7 +35,8 @@ def get_raw_graph_data_from_images(image, key) -> dict: #image: PIL.Image.Image
         chunk_size = 4096  # Adjust this value based on your needs
 
         message = client.messages.create(
-            model="claude-3-opus-20240229",
+            #model="claude-3-opus-latest",
+            model="claude-3-5-sonnet-latest",
             max_tokens=4096,  # Increased max_tokens
             messages=[
                 {
@@ -59,15 +60,12 @@ Format the extracted data as a dictionary with the following structure:
     "title": "The full title of the graph",
     "x-label": "label for x-axis",
     "y-label": "label for y-axis",
+    "plot-1 label":[[x1,x2,x3,x4...x500],[y1,y2,y3,y4...y500]],
+    "plot-2 label":[[x1,x2,x3,x4...x500],[y1,y2,y3,y4...y500]],
+    "plot-3 label":[[x1,x2,x3,x4...x500],[y1,y2,y3,y4...y500]],
+    ...
 
-    "data": {
-
-    	"plot-1 label":[[x1,x2,x3,x4...x500],[y1,y2,y3,y4...y500]],
-    	"plot-2 label":[[x1,x2,x3,x4...x500],[y1,y2,y3,y4...y500]],
-    	"plot-3 label":[[x1,x2,x3,x4...x500],[y1,y2,y3,y4...y500]],
-    	...
-
-    }
+    
 }"""
                         }
                     ]
@@ -82,8 +80,6 @@ Format the extracted data as a dictionary with the following structure:
 
         if len(full_response) >= chunk_size:
                 print(f"Claude model received {len(full_response)} characters")    
-        
-        #self.raw_api_response = full_response #for debugging purpose
 
         
         try:
@@ -95,33 +91,41 @@ Format the extracted data as a dictionary with the following structure:
             raise e
 
 
-
         return raw_graph_data
 
 
-def reconstruct(graph_data):
+def reconstruct(raw_image, graph_data):
 
     # Create the plot
-    plt.figure(figsize=(8, 6))  # Set the figure size
+    fig, axs = plt.subplots(1, 2, figsize=(12, 6))
 
-    data = graph_data["data"]
+    #data = graph_data["data"]
 
-    for label, values in data.items():
+    for label, values in graph_data.items():
+
+        if label in ["title", "x-label", "y-label"]:
+            continue
 
         x = values[0]
         y = values[1]
 
-        plt.plot(x, y, label=label)
+        axs[1].plot(x, y, label=label)
+    
 
-    # Add labels and title
-    plt.title(graph_data["title"], fontsize=16)
-    plt.xlabel(graph_data["x-label"], fontsize=14)
-    plt.ylabel(graph_data["y-label"], fontsize=14)
+    # Plot the image on the first subplot
+    axs[0].imshow(raw_image)
+    axs[0].axis('off')
+    axs[0].set_title("Raw Image")
 
     
-    plt.legend(fontsize=12)
+    axs[1].set_title(graph_data["title"])
+    axs[1].set_xlabel(graph_data["x-label"])
+    axs[1].set_ylabel(graph_data["y-label"])
+    
+    axs[1].legend()
 
-    # Show the plot
+    # Adjust layout and display the figure
+    plt.tight_layout()
     plt.show()
 
 
@@ -134,7 +138,7 @@ if __name__ == '__main__':
     
     graph_data = get_raw_graph_data_from_images(image=image, key=os.environ.get('ANTHROPIC_API_KEY'))
 
-    reconstruct(graph_data)
+    reconstruct(image, graph_data)
 	
 
 	
